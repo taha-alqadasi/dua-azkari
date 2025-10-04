@@ -1,0 +1,395 @@
+// Dua Azkari - Islamic Content Management System
+// Prisma Schema for PostgreSQL Database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MediaType {
+  AUDIO
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+enum StorageType {
+  LOCAL
+  CLOUDFLARE_R2
+}
+
+enum RedirectType {
+  PERMANENT_301
+  TEMPORARY_302
+  TEMPORARY_307
+  PERMANENT_308
+}
+
+enum ActionType {
+  VIEW
+  PLAY
+  DOWNLOAD
+  SHARE
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  POST_CREATED
+  POST_UPDATED
+  POST_DELETED
+  POST_PUBLISHED
+  USER_CREATED
+  USER_UPDATED
+  MEDIA_UPLOADED
+  COMMENT_ADDED
+}
+
+enum EntityType {
+  POST
+  PAGE
+  CATEGORY
+  USER
+}
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  PUBLISH
+  MANAGE_USERS
+  MANAGE_ROLES
+  MANAGE_SETTINGS
+  MANAGE_MENUS
+  MANAGE_MEDIA
+}
+
+// Core Tables
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(VIEWER)
+  customRoleId String?  @map("custom_role_id") // للأدوار المخصصة
+  avatarUrl    String?  @map("avatar_url")
+  isActive     Boolean  @default(true) @map("is_active")
+  emailVerified Boolean @default(false) @map("email_verified")
+  verificationToken String? @map("verification_token")
+  resetPasswordToken String? @map("reset_password_token")
+  resetPasswordExpires DateTime? @map("reset_password_expires")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  posts        Post[]
+  pages        Page[]
+  mediaLibrary MediaLibrary[]
+  customRole   Role?  @relation(fields: [customRoleId], references: [id])
+  notifications Notification[]
+  createdNotifications Notification[] @relation("CreatedNotifications")
+
+  @@map("users")
+  @@index([email])
+  @@index([role])
+  @@index([customRoleId])
+  @@index([emailVerified])
+  @@index([verificationToken])
+  @@index([resetPasswordToken])
+}
+
+model Category {
+  id             String    @id @default(uuid())
+  nameAr         String    @map("name_ar")
+  nameEn         String?   @map("name_en")
+  slug           String    @unique
+  description    String?
+  color          String?   // لون التصنيف (HEX color)
+  icon           String?
+  parentId       String?   @map("parent_id")
+  orderNumber    Int       @default(0) @map("order_number")
+  isActive       Boolean   @default(true) @map("is_active")
+  seoTitle       String?   @map("seo_title")
+  seoDescription String?   @map("seo_description")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  posts    Post[]
+
+  @@map("categories")
+  @@index([slug])
+  @@index([parentId])
+  @@index([orderNumber])
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  nameAr      String   @map("name_ar")
+  nameEn      String?  @map("name_en")
+  slug        String   @unique
+  description String?  // وصف الوسم
+  color       String?  // لون الوسم (HEX color)
+  isActive    Boolean  @default(true) @map("is_active") // حالة الوسم
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  posts PostTag[]
+
+  @@map("tags")
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Post {
+  id             String     @id @default(uuid())
+  titleAr        String     @map("title_ar")
+  titleEn        String?    @map("title_en")
+  slug           String     @unique
+  duaNumber      Int        @unique @map("dua_number") // رقم الدعاء (فريد ويتم توليده تلقائياً من API)
+  description    String?
+  content        String?
+  audioUrl       String     @map("audio_url")
+  audioDuration  Int        @map("audio_duration") // in seconds
+  audioFileSize  BigInt     @map("audio_file_size") // in bytes
+  thumbnailUrl   String?    @map("thumbnail_url")
+  reciterName    String?    @map("reciter_name")
+  status         PostStatus @default(DRAFT)
+  viewCount      Int        @default(0) @map("view_count")
+  downloadCount  Int        @default(0) @map("download_count")
+  isFeatured     Boolean    @default(false) @map("is_featured")
+  publishedAt    DateTime?  @map("published_at")
+  authorId       String     @map("author_id")
+  categoryId     String     @map("category_id")
+  seoTitle       String?    @map("seo_title")
+  seoDescription String?    @map("seo_description")
+  seoKeywords    String?    @map("seo_keywords")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  author   User      @relation(fields: [authorId], references: [id])
+  category Category  @relation(fields: [categoryId], references: [id])
+  tags     PostTag[]
+  analytics Analytics[]
+
+  @@map("posts")
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([isFeatured])
+  @@index([duaNumber])
+}
+
+model PostTag {
+  postId String @map("post_id")
+  tagId  String @map("tag_id")
+
+  // Relations
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("posts_tags")
+}
+
+model MediaLibrary {
+  id          String      @id @default(uuid())
+  fileName    String      @map("file_name")
+  fileType    MediaType   @map("file_type")
+  mimeType    String      @map("mime_type")
+  fileSize    BigInt      @map("file_size")
+  fileUrl     String      @map("file_url")
+  altText     String?     @map("alt_text")
+  caption     String?
+  width       Int?
+  height      Int?
+  duration    Int? // for audio/video in seconds
+  storageType StorageType @default(LOCAL) @map("storage_type")
+  uploadedBy  String      @map("uploaded_by")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@map("media_library")
+  @@index([fileType])
+  @@index([uploadedBy])
+  @@index([storageType])
+}
+
+model Page {
+  id             String     @id @default(uuid())
+  titleAr        String     @map("title_ar")
+  titleEn        String?    @map("title_en")
+  slug           String     @unique
+  content        String     @db.Text
+  template       String     @default("default")
+  status         PostStatus @default(DRAFT)
+  authorId       String     @map("author_id")
+  seoTitle       String?    @map("seo_title")
+  seoDescription String?    @map("seo_description")
+  seoKeywords    String?    @map("seo_keywords")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  author User @relation(fields: [authorId], references: [id])
+
+  @@map("pages")
+  @@index([slug])
+  @@index([status])
+}
+
+model Redirection {
+  id           String       @id @default(uuid())
+  fromPath     String       @unique @map("from_path")
+  toPath       String       @map("to_path")
+  redirectType RedirectType @map("redirect_type")
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("redirections")
+  @@index([fromPath])
+  @@index([isActive])
+}
+
+model CustomField {
+  id         String     @id @default(uuid())
+  entityType EntityType @map("entity_type")
+  entityId   String     @map("entity_id")
+  fieldKey   String     @map("field_key")
+  fieldValue Json       @map("field_value")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  @@map("custom_fields")
+  @@index([entityType, entityId])
+}
+
+model Setting {
+  id           String   @id @default(uuid())
+  settingKey   String   @unique @map("setting_key")
+  settingValue Json     @map("setting_value")
+  settingGroup String   @map("setting_group") // general, seo, social, etc.
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+  @@index([settingGroup])
+}
+
+model Analytics {
+  id         String     @id @default(uuid())
+  postId     String?    @map("post_id")
+  actionType ActionType @map("action_type")
+  ipAddress  String?    @map("ip_address")
+  userAgent  String?    @map("user_agent")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  post Post? @relation(fields: [postId], references: [id])
+
+  @@map("analytics")
+  @@index([postId, actionType, createdAt])
+}
+
+// ============= نظام الصلاحيات (Permissions System) =============
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // اسم الدور (مثل: "محرر محتوى", "ناشر", "مدير محتوى")
+  nameEn      String?  @map("name_en") // الاسم بالإنجليزية
+  description String?  // وصف الدور
+  isActive    Boolean  @default(true) @map("is_active")
+  isSystem    Boolean  @default(false) @map("is_system") // هل هو دور نظام (لا يمكن حذفه)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+  @@index([isActive])
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  action      PermissionAction // الإجراء (CREATE, READ, UPDATE, DELETE, etc.)
+  resource    String           // المورد (posts, categories, users, settings, etc.)
+  description String?          // وصف الصلاحية
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  roles RolePermission[]
+
+  @@unique([action, resource])
+  @@map("permissions")
+  @@index([action])
+  @@index([resource])
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============= نظام الإشعارات (Notifications System) =============
+
+model Notification {
+  id          String           @id @default(uuid())
+  type        NotificationType
+  title       String
+  message     String           @db.Text
+  userId      String?          @map("user_id") // null = إشعار عام لجميع المستخدمين
+  isRead      Boolean          @default(false) @map("is_read")
+  actionUrl   String?          @map("action_url") // رابط الإجراء (مثل: /admin/posts/123)
+  metadata    Json?            // بيانات إضافية
+  createdBy   String?          @map("created_by") // من أنشأ الإشعار
+  createdAt   DateTime         @default(now()) @map("created_at")
+  readAt      DateTime?        @map("read_at")
+
+  // Relations
+  user    User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creator User? @relation("CreatedNotifications", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@map("notifications")
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([type])
+}

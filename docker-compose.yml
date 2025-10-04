@@ -1,0 +1,83 @@
+services:
+  # تطبيق Next.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dua_azkari_app
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://duauser:secure_password_2024@postgres:5432/dua_azkari
+      - DIRECT_URL=postgresql://duauser:secure_password_2024@postgres:5432/dua_azkari
+      - NEXTAUTH_SECRET=dua-azkari-secret-key-2024-very-secure-random-string
+      - NEXTAUTH_URL=http://localhost:3001
+      - NEXT_PUBLIC_APP_NAME=دعاء أذكاري
+      - NEXT_PUBLIC_APP_URL=http://localhost:3001
+      - NEXT_PUBLIC_ADMIN_URL=http://localhost:3001/admin
+      - UPLOAD_DIR=./public/uploads
+      - MAX_FILE_SIZE=10485760
+    volumes:
+      - ./public/uploads:/app/public/uploads
+      - ./prisma:/app/prisma
+    networks:
+      - dua_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: dua_azkari_db
+    environment:
+      POSTGRES_USER: duauser
+      POSTGRES_PASSWORD: secure_password_2024
+      POSTGRES_DB: dua_azkari
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - dua_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U duauser -d dua_azkari"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: dua_azkari_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@azkari.app
+      PGADMIN_DEFAULT_PASSWORD: admin_password_2024
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5051:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - dua_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  dua_network:
+    driver: bridge

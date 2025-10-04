@@ -1,0 +1,27 @@
+{
+  "name": "دعاء أذكاري",
+  "short_name": "دعاء أذكاري",
+  "description": "منصة إسلامية شاملة للأدعية والأذكار الصحيحة من القرآن الكريم والسنة النبوية الشريفة",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e9e94",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
