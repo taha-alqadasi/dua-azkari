@@ -147,15 +147,44 @@ nano .env.local
 
 ```env
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/dua_azkari"
+DATABASE_URL="postgresql://duauser:secure_password_2024@localhost:5432/dua_azkari"
 
-# NextAuth
-NEXTAUTH_SECRET="your-secret-key-generate-with-openssl"
+# Site Configuration
+NEXT_PUBLIC_SITE_URL="http://localhost:3001"
+
+# NextAuth.js
+NEXTAUTH_SECRET="dua-azkari-secret-key-2024-very-secure-random-string"
 NEXTAUTH_URL="http://localhost:3001"
 
-# App
+# App Configuration
 NEXT_PUBLIC_APP_NAME="دعاء أذكاري"
 NEXT_PUBLIC_APP_URL="http://localhost:3001"
+NEXT_PUBLIC_ADMIN_URL="http://localhost:3001/admin"
+
+# File Upload
+UPLOAD_DIR="./public/uploads"
+MAX_FILE_SIZE=10485760
+
+# Cloudflare R2 Configuration
+CLOUDFLARE_R2_ACCOUNT_ID=1f9baa58a82c7b8a7074bd24e36d4f21
+CLOUDFLARE_R2_ACCESS_KEY_ID=e44f7021c266e08b05ba225ccde705fa
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=94e418ea4f2cb4274e1400f3fbbd63cd62ae1543f17c62cb3ec26836552d7d10
+CLOUDFLARE_R2_REGION=auto
+CLOUDFLARE_R2_BUCKET=media
+CLOUDFLARE_R2_CUSTOM_DOMAIN=https://media.azkari.app
+CLOUDFLARE_R2_ENDPOINT=https://1f9baa58a82c7b8a7074bd24e36d4f21.r2.cloudflarestorage.com
+CLOUDFLARE_R2_USE_PATH_STYLE=false
+
+
+
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="465"
+SMTP_SECURE="true"
+SMTP_USER="upupaapp@gmail.com"                # بريد المرسل
+SMTP_PASSWORD="ykyiivozjfvzsbra"              # App Password (16 حرف من Google)
+SMTP_FROM="Dua Azkari <upupaapp@gmail.com>"   # اسم وعنوان المرسل
+SMTP_FROM_NAME="دعاء أذكاري"
+
 ```
 
 #### 5️⃣ تشغيل Migrations
